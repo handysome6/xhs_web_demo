@@ -49,4 +49,4 @@ temp/
 config/secrets.json
 secrets/
 
-.claude\settings.local.json
+.claude/settings.local.json
