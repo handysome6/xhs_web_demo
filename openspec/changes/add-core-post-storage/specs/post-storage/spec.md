@@ -34,21 +34,30 @@ The system SHALL extract post metadata from XiaoHongShu pages including title, d
 - **THEN** the system returns an error indicating cookie is required
 
 ### Requirement: Media Download
-The system SHALL download extracted images and videos to local storage.
+The system SHALL download extracted images and videos to local storage using the correct CDN URL format and headers.
 
 #### Scenario: Image download success
 - **WHEN** image URLs are extracted from a post
-- **THEN** the system downloads each image to `storage/images/`
+- **THEN** the system uses the original SNS CDN URL with format suffix (e.g., `!nd_dft_wlteh_webp_3`)
+- **AND** ensures HTTPS protocol
+- **AND** includes proper headers (User-Agent, Referer, Cookie if provided)
+- **AND** downloads each image to `storage/images/`
 - **AND** stores the local file path in the database
 
 #### Scenario: Video download success
 - **WHEN** a video URL is extracted from a post
-- **THEN** the system downloads the video to `storage/videos/`
+- **THEN** the system uses the original masterUrl directly
+- **AND** downloads the video to `storage/videos/`
 - **AND** stores the local file path in the database
 
+#### Scenario: Authenticated download
+- **WHEN** user provides XHS cookie for authentication
+- **THEN** the system passes the cookie to the media downloader
+- **AND** includes Cookie header in download requests
+
 #### Scenario: Download failure handling
-- **WHEN** media download fails (network error, expired URL)
-- **THEN** the system logs the error
+- **WHEN** media download fails (network error, expired URL, 403/500 errors)
+- **THEN** the system logs the error with status code
 - **AND** stores the original URL without local path
 
 ### Requirement: Post Persistence

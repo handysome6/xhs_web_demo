@@ -103,14 +103,21 @@ async function extractPostContent(fullUrl, xhsCookie) {
   const title = note?.title || '';
   const description = note?.desc || '';
 
-  // Extract image URLs
+  // Extract image URLs - keep full URL with format suffix
   let imageUrls = [];
-  const regex = /https?:\/\/sns-webpic-qc\.xhscdn\.com\/\d+\/[0-9a-z]+\/(\S+)!/;
   imageList.forEach((item) => {
-    const tempUrl = item.infoList[0].url;
-    let match = tempUrl.match(regex);
-    if (match && match[1]) {
-      imageUrls.push(`https://ci.xiaohongshu.com/${match[1]}?imageView2/2/w/0/format/png`);
+    try {
+      let originalUrl = item.infoList?.[0]?.url;
+      if (originalUrl) {
+        // Ensure HTTPS protocol
+        if (originalUrl.startsWith('http://')) {
+          originalUrl = originalUrl.replace('http://', 'https://');
+        }
+        // Keep full URL including !suffix (required by CDN)
+        imageUrls.push(originalUrl);
+      }
+    } catch (error) {
+      console.log('Failed to extract image URL:', error);
     }
   });
 

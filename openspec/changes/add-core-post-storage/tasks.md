@@ -22,6 +22,9 @@
 - [x] 4.2 Implement image download with proper naming
 - [x] 4.3 Implement video download with proper naming
 - [x] 4.4 Add download error handling and fallback to URL storage
+- [x] 4.5 Preserve full image URL with CDN format suffix
+- [x] 4.6 Enforce HTTPS protocol for CDN requests
+- [x] 4.7 Support cookie passthrough for authenticated downloads
 
 ## 5. REST API
 - [x] 5.1 Create Express app in server/index.js
@@ -45,7 +48,7 @@
 - [x] 7.3 Add npm scripts for dev and build
 
 ## 8. Testing
-- [ ] 8.1 Manual test: submit valid image post link
-- [ ] 8.2 Manual test: submit valid video post link
+- [x] 8.1 Manual test: submit valid image post link
+- [x] 8.2 Manual test: submit valid video post link
 - [ ] 8.3 Manual test: submit invalid link
 - [ ] 8.4 Manual test: view and delete saved post

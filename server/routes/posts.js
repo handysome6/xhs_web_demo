@@ -34,8 +34,8 @@ router.post('/', async (req, res) => {
       });
     }
 
-    // Download media files
-    const mediaResults = await downloadMedia(mediaUrls);
+    // Download media files (pass cookie for authenticated access)
+    const mediaResults = await downloadMedia(mediaUrls, xhsCookie);
 
     // Create post in database
     const post = db.createPost({

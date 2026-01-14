@@ -21,14 +21,19 @@ if (!fs.existsSync(VIDEOS_DIR)) {
 
 /**
  * Get headers for downloading media from XHS CDN
+ * @param {string} cookie - Optional XHS cookie for authentication
  */
-function getDownloadHeaders() {
-  return {
+function getDownloadHeaders(cookie = '') {
+  const headers = {
     'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
     'Referer': 'https://www.xiaohongshu.com/',
     'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
     'Accept-Language': 'zh-CN,zh;q=0.9',
   };
+  if (cookie) {
+    headers['Cookie'] = cookie;
+  }
+  return headers;
 }
 
 /**
@@ -63,15 +68,16 @@ function generateFilename(url, isVideo) {
 
 /**
  * Download a single media file
+ * @param {string} cookie - Optional XHS cookie for authentication
  */
-async function downloadFile(url, targetPath) {
+async function downloadFile(url, targetPath, cookie = '') {
   try {
     const response = await axios({
       method: 'get',
       url: url,
       responseType: 'stream',
       timeout: 30000,
-      headers: getDownloadHeaders()
+      headers: getDownloadHeaders(cookie)
     });
 
     const writer = fs.createWriteStream(targetPath);
@@ -91,9 +97,10 @@ async function downloadFile(url, targetPath) {
 /**
  * Download media files from URLs
  * @param {string[]} mediaUrls - Array of media URLs to download
+ * @param {string} cookie - Optional XHS cookie for authentication
  * @returns {Promise<Array<{url: string, localPath: string | null, type: string}>>}
  */
-export async function downloadMedia(mediaUrls) {
+export async function downloadMedia(mediaUrls, cookie = '') {
   const results = [];
 
   for (const url of mediaUrls) {
@@ -104,7 +111,7 @@ export async function downloadMedia(mediaUrls) {
     const targetPath = path.join(targetDir, filename);
 
     try {
-      await downloadFile(url, targetPath);
+      await downloadFile(url, targetPath, cookie);
 
       // Store relative path from project root
       const relativePath = path.join('storage', isVideo ? 'videos' : 'images', filename);
