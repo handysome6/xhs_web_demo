@@ -48,3 +48,16 @@ export async function deletePost(id) {
 
   return response.json();
 }
+
+export async function processPostWithAI(id) {
+  const response = await fetch(`${API_BASE}/posts/${id}/process`, {
+    method: 'POST'
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'AI处理失败');
+  }
+
+  return response.json();
+}

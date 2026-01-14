@@ -21,6 +21,25 @@ db.exec(`
   )
 `);
 
+// Migration: Add AI columns if they don't exist
+const tableInfo = db.pragma('table_info(posts)');
+const columns = tableInfo.map(col => col.name);
+
+if (!columns.includes('ai_labels')) {
+  db.exec('ALTER TABLE posts ADD COLUMN ai_labels TEXT');
+  console.log('Added ai_labels column to posts table');
+}
+
+if (!columns.includes('ai_summary')) {
+  db.exec('ALTER TABLE posts ADD COLUMN ai_summary TEXT');
+  console.log('Added ai_summary column to posts table');
+}
+
+if (!columns.includes('ai_processed_at')) {
+  db.exec('ALTER TABLE posts ADD COLUMN ai_processed_at DATETIME');
+  console.log('Added ai_processed_at column to posts table');
+}
+
 // Database access functions
 
 /**
@@ -49,8 +68,13 @@ export function findById(id) {
   const stmt = db.prepare('SELECT * FROM posts WHERE id = ?');
   const post = stmt.get(id);
 
-  if (post && post.media_paths) {
-    post.media_paths = JSON.parse(post.media_paths);
+  if (post) {
+    if (post.media_paths) {
+      post.media_paths = JSON.parse(post.media_paths);
+    }
+    if (post.ai_labels) {
+      post.ai_labels = JSON.parse(post.ai_labels);
+    }
   }
 
   return post;
@@ -63,8 +87,13 @@ export function findByUrl(url) {
   const stmt = db.prepare('SELECT * FROM posts WHERE url = ?');
   const post = stmt.get(url);
 
-  if (post && post.media_paths) {
-    post.media_paths = JSON.parse(post.media_paths);
+  if (post) {
+    if (post.media_paths) {
+      post.media_paths = JSON.parse(post.media_paths);
+    }
+    if (post.ai_labels) {
+      post.ai_labels = JSON.parse(post.ai_labels);
+    }
   }
 
   return post;
@@ -86,6 +115,9 @@ export function findAll({ limit = 20, offset = 0 } = {}) {
     if (post.media_paths) {
       post.media_paths = JSON.parse(post.media_paths);
     }
+    if (post.ai_labels) {
+      post.ai_labels = JSON.parse(post.ai_labels);
+    }
     return post;
   });
 }
@@ -105,6 +137,20 @@ export function deletePost(id) {
   const stmt = db.prepare('DELETE FROM posts WHERE id = ?');
   const info = stmt.run(id);
   return info.changes > 0;
+}
+
+/**
+ * Update AI processing results for a post
+ */
+export function updateAiResults(id, { labels, summary }) {
+  const stmt = db.prepare(`
+    UPDATE posts
+    SET ai_labels = ?, ai_summary = ?, ai_processed_at = CURRENT_TIMESTAMP
+    WHERE id = ?
+  `);
+
+  stmt.run(JSON.stringify(labels || []), summary || null, id);
+  return findById(id);
 }
 
 export default db;

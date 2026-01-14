@@ -1,6 +1,7 @@
 import express from 'express';
 import { extractPost } from '../services/xhsExtractor.js';
 import { downloadMedia } from '../services/mediaDownloader.js';
+import { processPost } from '../services/aiService.js';
 import * as db from '../db/database.js';
 import fs from 'fs';
 import path from 'path';
@@ -10,6 +11,31 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const router = express.Router();
+
+/**
+ * Trigger AI processing for a post (async, non-blocking)
+ */
+async function triggerAiProcessing(postId) {
+  try {
+    const post = db.findById(postId);
+    if (!post) {
+      console.error(`AI processing: Post ${postId} not found`);
+      return;
+    }
+
+    console.log(`Starting AI processing for post ${postId}...`);
+    const { labels, summary } = await processPost(post);
+
+    if (labels || summary) {
+      db.updateAiResults(postId, { labels, summary });
+      console.log(`AI processing completed for post ${postId}`);
+    } else {
+      console.log(`AI processing skipped for post ${postId} (no API key or no results)`);
+    }
+  } catch (error) {
+    console.error(`AI processing failed for post ${postId}:`, error.message);
+  }
+}
 
 /**
  * POST /api/posts - Create a new post from share link
@@ -44,6 +70,9 @@ router.post('/', async (req, res) => {
       description,
       mediaPaths: mediaResults
     });
+
+    // Trigger AI processing asynchronously (non-blocking)
+    triggerAiProcessing(post.id);
 
     res.status(201).json({
       message: '帖子保存成功',
@@ -101,6 +130,43 @@ router.get('/:id', async (req, res) => {
     console.error('Error fetching post:', error);
     res.status(500).json({
       error: '获取帖子失败'
+    });
+  }
+});
+
+/**
+ * POST /api/posts/:id/process - Manually trigger AI processing
+ */
+router.post('/:id/process', async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const post = db.findById(id);
+
+    if (!post) {
+      return res.status(404).json({
+        error: '帖子不存在'
+      });
+    }
+
+    console.log(`Manual AI processing triggered for post ${id}`);
+    const { labels, summary } = await processPost(post);
+
+    if (labels || summary) {
+      const updatedPost = db.updateAiResults(id, { labels, summary });
+      res.json({
+        message: 'AI处理完成',
+        post: updatedPost
+      });
+    } else {
+      res.json({
+        message: 'AI处理跳过（未配置API密钥或无结果）',
+        post
+      });
+    }
+  } catch (error) {
+    console.error('Error processing post with AI:', error);
+    res.status(500).json({
+      error: 'AI处理失败: ' + error.message
     });
   }
 });

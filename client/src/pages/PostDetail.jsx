@@ -1,18 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getPost } from '../services/api';
-
-// Fake AI labels for demonstration
-const FAKE_LABELS = [
-  '生活方式', '美食探店', '穿搭分享', '旅行日记', '护肤心得',
-  '家居好物', '职场经验', '学习笔记', '健身打卡', '宠物日常'
-];
-
-function getRandomLabels() {
-  const count = Math.floor(Math.random() * 3) + 2; // 2-4 labels
-  const shuffled = [...FAKE_LABELS].sort(() => 0.5 - Math.random());
-  return shuffled.slice(0, count);
-}
+import { getPost, processPostWithAI } from '../services/api';
 
 export default function PostDetail() {
   const { id } = useParams();
@@ -20,7 +8,7 @@ export default function PostDetail() {
   const [post, setPost] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [fakeLabels] = useState(() => getRandomLabels());
+  const [processing, setProcessing] = useState(false);
 
   useEffect(() => {
     async function fetchPost() {
@@ -36,6 +24,18 @@ export default function PostDetail() {
     }
     fetchPost();
   }, [id]);
+
+  const handleProcessAI = async () => {
+    try {
+      setProcessing(true);
+      const data = await processPostWithAI(id);
+      setPost(data.post);
+    } catch (err) {
+      alert('AI处理失败: ' + err.message);
+    } finally {
+      setProcessing(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -67,6 +67,7 @@ export default function PostDetail() {
 
   const images = post.media_paths?.filter(m => m.type === 'image') || [];
   const videos = post.media_paths?.filter(m => m.type === 'video') || [];
+  const hasAiData = post.ai_labels?.length > 0 || post.ai_summary;
 
   return (
     <div className="post-detail">
@@ -94,31 +95,74 @@ export default function PostDetail() {
         <div className="ai-section ai-labels">
           <div className="ai-section-header">
             <h3>AI 标签</h3>
-            <span className="ai-badge">AI 生成</span>
+            {post.ai_labels?.length > 0 && <span className="ai-badge">AI 生成</span>}
           </div>
-          <div className="labels-container">
-            {fakeLabels.map((label, index) => (
-              <span key={index} className="label-tag">{label}</span>
-            ))}
-          </div>
-          <p className="ai-placeholder-note">* 标签由 AI 自动生成（演示数据）</p>
+          {processing ? (
+            <div className="ai-loading">
+              <span className="spinner"></span> AI 处理中...
+            </div>
+          ) : post.ai_labels?.length > 0 ? (
+            <div className="labels-container">
+              {post.ai_labels.map((label, index) => (
+                <span key={index} className="label-tag">{label}</span>
+              ))}
+            </div>
+          ) : (
+            <div className="ai-not-processed">
+              <p>暂无 AI 标签</p>
+              <button
+                className="process-btn"
+                onClick={handleProcessAI}
+                disabled={processing}
+              >
+                生成 AI 标签
+              </button>
+            </div>
+          )}
         </div>
 
         {/* AI Summary Section */}
         <div className="ai-section ai-summary">
           <div className="ai-section-header">
             <h3>AI 摘要</h3>
-            <span className="ai-badge">AI 生成</span>
+            {post.ai_summary && <span className="ai-badge">AI 生成</span>}
           </div>
-          <div className="summary-content">
-            <p>
-              这是一篇关于{fakeLabels[0]}的分享。作者详细介绍了相关内容和个人体验，
-              包含了{images.length}张精美图片{videos.length > 0 ? `和${videos.length}个视频` : ''}。
-              内容丰富，值得收藏参考。
-            </p>
-          </div>
-          <p className="ai-placeholder-note">* 摘要由 AI 自动生成（演示数据）</p>
+          {processing ? (
+            <div className="ai-loading">
+              <span className="spinner"></span> AI 处理中...
+            </div>
+          ) : post.ai_summary ? (
+            <div className="summary-content">
+              <p>{post.ai_summary}</p>
+            </div>
+          ) : (
+            <div className="ai-not-processed">
+              <p>暂无 AI 摘要</p>
+              {!post.ai_labels?.length && (
+                <button
+                  className="process-btn"
+                  onClick={handleProcessAI}
+                  disabled={processing}
+                >
+                  生成 AI 摘要
+                </button>
+              )}
+            </div>
+          )}
         </div>
+
+        {/* Re-process button if already has AI data */}
+        {hasAiData && (
+          <div className="ai-reprocess">
+            <button
+              className="reprocess-btn"
+              onClick={handleProcessAI}
+              disabled={processing}
+            >
+              {processing ? '处理中...' : '重新生成 AI 内容'}
+            </button>
+          </div>
+        )}
 
         {/* Description */}
         <div className="detail-description">
