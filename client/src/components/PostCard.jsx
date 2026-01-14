@@ -1,10 +1,18 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { deletePost } from '../services/api';
 
 export default function PostCard({ post, onDelete }) {
   const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
-  const handleDelete = async () => {
+  const handleClick = () => {
+    navigate(`/posts/${post.id}`);
+  };
+
+  const handleDelete = async (e) => {
+    e.stopPropagation(); // Prevent card click
+
     if (!confirm('确定要删除这个帖子吗？')) {
       return;
     }
@@ -27,7 +35,7 @@ export default function PostCard({ post, onDelete }) {
   const mediaCount = post.media_paths?.length || 0;
 
   return (
-    <div className="post-card">
+    <div className="post-card" onClick={handleClick}>
       {thumbnail?.localPath && (
         <div className="post-thumbnail">
           <img src={`/${thumbnail.localPath}`} alt={post.title} />
