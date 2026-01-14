@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import Markdown from 'react-markdown';
 import { getPost, processPostWithAI } from '../services/api';
 
 export default function PostDetail() {
@@ -132,8 +133,8 @@ export default function PostDetail() {
               <span className="spinner"></span> AI 处理中...
             </div>
           ) : post.ai_summary ? (
-            <div className="summary-content">
-              <p>{post.ai_summary}</p>
+            <div className="summary-content markdown-content">
+              <Markdown>{post.ai_summary}</Markdown>
             </div>
           ) : (
             <div className="ai-not-processed">

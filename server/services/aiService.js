@@ -113,17 +113,18 @@ export async function generateSummary(title, description, mediaPaths) {
     return null;
   }
 
-  const prompt = `你是一个内容摘要助手。请根据以下小红书帖子内容，生成一个简洁的中文摘要。
+  const prompt = `你是一个内容摘要助手。请根据以下小红书帖子内容，生成一份摘要。
 
 标题：${title || '无标题'}
 
 内容：${description || '无描述'}
 
 要求：
-1. 摘要应该是2-3句话
-2. 概括帖子的主要内容和亮点
+1. 摘要应该控制在200字以内
+2. 概括帖子的主要内容, 不要包含亮点
 3. 使用简洁、通顺的中文
-4. 只返回摘要内容，不要其他解释`;
+4. 只返回摘要内容，不要其他解释
+5. 必要时使用bullet points格式来组织内容`;
 
   try {
     const response = await callOpenRouter(config.apiKey, config.model, [

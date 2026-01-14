@@ -27,7 +27,8 @@ The system SHALL use OpenRouter API to generate labels and summaries for saved p
 #### Scenario: Generate summary for post
 - **WHEN** AI processing is triggered for a post
 - **THEN** the system sends the post title and description to OpenRouter API
-- **AND** requests a concise summary (2-3 sentences) in Chinese
+- **AND** requests a concise summary (under 200 characters) in Chinese
+- **AND** the summary may use markdown formatting (bullet points, etc.)
 - **AND** stores the generated summary in the database
 
 #### Scenario: API key not configured
@@ -74,12 +75,16 @@ The system SHALL display AI-generated labels for each post on the detail page.
 - **THEN** the system displays a loading spinner in the labels section
 
 ### Requirement: AI Summary Display
-The system SHALL display an AI-generated summary for each post on the detail page.
+The system SHALL display an AI-generated summary for each post on the detail page, with support for markdown formatting.
 
 #### Scenario: Display summary
 - **WHEN** user views a post detail page with AI summary
 - **THEN** the system displays the summary section
-- **AND** shows the AI-generated summary text
+- **AND** renders the AI-generated summary as markdown (supporting headers, bullet points, bold, etc.)
+
+#### Scenario: Display summary with bullet points
+- **WHEN** the AI summary contains bullet point formatting
+- **THEN** the system renders the bullet points as a proper list
 
 #### Scenario: No summary available
 - **WHEN** AI summary has not been generated for a post
