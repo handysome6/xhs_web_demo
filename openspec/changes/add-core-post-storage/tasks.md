@@ -50,5 +50,5 @@
 ## 8. Testing
 - [x] 8.1 Manual test: submit valid image post link
 - [x] 8.2 Manual test: submit valid video post link
-- [ ] 8.3 Manual test: submit invalid link
-- [ ] 8.4 Manual test: view and delete saved post
+- [x] 8.3 Manual test: submit invalid link
+- [x] 8.4 Manual test: view and delete saved post
