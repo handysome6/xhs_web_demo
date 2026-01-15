@@ -448,6 +448,137 @@ button:disabled {
   display: block;
 }
 
+.gallery-item-clickable {
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.gallery-item-clickable:hover {
+  transform: scale(1.02);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+/* Fullscreen Gallery Modal */
+.gallery-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.95);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.gallery-modal-content {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.gallery-close {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: transparent;
+  border: none;
+  color: white;
+  font-size: 40px;
+  cursor: pointer;
+  padding: 10px;
+  line-height: 1;
+  z-index: 1001;
+  transition: opacity 0.2s;
+}
+
+.gallery-close:hover {
+  opacity: 0.7;
+}
+
+.gallery-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: white;
+  font-size: 48px;
+  cursor: pointer;
+  padding: 20px 15px;
+  z-index: 1001;
+  transition: background 0.2s;
+}
+
+.gallery-nav:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.gallery-prev {
+  left: 20px;
+}
+
+.gallery-next {
+  right: 20px;
+}
+
+.gallery-image-container {
+  max-width: 90%;
+  max-height: 90%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.gallery-image-container img {
+  max-width: 100%;
+  max-height: 85vh;
+  object-fit: contain;
+}
+
+.gallery-counter {
+  position: absolute;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: white;
+  font-size: 16px;
+  background: rgba(0, 0, 0, 0.5);
+  padding: 8px 16px;
+  border-radius: 20px;
+}
+
+/* Mobile adjustments for gallery */
+@media (max-width: 768px) {
+  .gallery-nav {
+    font-size: 32px;
+    padding: 15px 10px;
+  }
+
+  .gallery-prev {
+    left: 10px;
+  }
+
+  .gallery-next {
+    right: 10px;
+  }
+
+  .gallery-close {
+    top: 10px;
+    right: 10px;
+    font-size: 32px;
+  }
+
+  .gallery-counter {
+    bottom: 20px;
+    font-size: 14px;
+  }
+}
+
 /* Video Player */
 .detail-videos {
   margin-bottom: 24px;

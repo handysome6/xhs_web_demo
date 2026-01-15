@@ -5,6 +5,7 @@ import { getPost, processPostWithAI } from '../services/api';
 
 const POLL_INTERVAL = 2000; // 2 seconds
 const POLL_TIMEOUT = 60000; // 60 seconds
+const SWIPE_THRESHOLD = 50; // minimum swipe distance in pixels
 
 export default function PostDetail() {
   const { id } = useParams();
@@ -14,6 +15,11 @@ export default function PostDetail() {
   const [error, setError] = useState(null);
   const pollStartTime = useRef(null);
   const pollTimer = useRef(null);
+
+  // Image gallery state
+  const [galleryOpen, setGalleryOpen] = useState(false);
+  const [galleryIndex, setGalleryIndex] = useState(0);
+  const touchStartX = useRef(null);
 
   // Check if AI is currently processing
   const isAiProcessing = post?.ai_status === 'pending' || post?.ai_status === 'processing';
@@ -100,6 +106,76 @@ export default function PostDetail() {
     } catch (err) {
       alert('AI处理触发失败: ' + err.message);
     }
+  };
+
+  // Gallery functions
+  const openGallery = (index) => {
+    setGalleryIndex(index);
+    setGalleryOpen(true);
+  };
+
+  const closeGallery = () => {
+    setGalleryOpen(false);
+  };
+
+  const nextImage = useCallback(() => {
+    const images = post?.media_paths?.filter(m => m.type === 'image') || [];
+    if (images.length > 0) {
+      setGalleryIndex((prev) => (prev + 1) % images.length);
+    }
+  }, [post]);
+
+  const prevImage = useCallback(() => {
+    const images = post?.media_paths?.filter(m => m.type === 'image') || [];
+    if (images.length > 0) {
+      setGalleryIndex((prev) => (prev - 1 + images.length) % images.length);
+    }
+  }, [post]);
+
+  // Keyboard navigation for gallery
+  useEffect(() => {
+    if (!galleryOpen) return;
+
+    const handleKeyDown = (e) => {
+      switch (e.key) {
+        case 'Escape':
+          closeGallery();
+          break;
+        case 'ArrowLeft':
+          prevImage();
+          break;
+        case 'ArrowRight':
+          nextImage();
+          break;
+        default:
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [galleryOpen, nextImage, prevImage]);
+
+  // Touch handlers for swipe
+  const handleTouchStart = (e) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchEnd = (e) => {
+    if (touchStartX.current === null) return;
+
+    const touchEndX = e.changedTouches[0].clientX;
+    const diff = touchStartX.current - touchEndX;
+
+    if (Math.abs(diff) > SWIPE_THRESHOLD) {
+      if (diff > 0) {
+        nextImage(); // swipe left -> next
+      } else {
+        prevImage(); // swipe right -> prev
+      }
+    }
+
+    touchStartX.current = null;
   };
 
   if (loading) {
@@ -242,10 +318,49 @@ export default function PostDetail() {
             <h3>图片 ({images.length})</h3>
             <div className="gallery-grid">
               {images.map((img, index) => (
-                <div key={index} className="gallery-item">
+                <div
+                  key={index}
+                  className="gallery-item gallery-item-clickable"
+                  onClick={() => openGallery(index)}
+                >
                   <img src={`/${img.localPath}`} alt={`图片 ${index + 1}`} />
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* Fullscreen Image Gallery Modal */}
+        {galleryOpen && images.length > 0 && (
+          <div className="gallery-modal" onClick={closeGallery}>
+            <div
+              className="gallery-modal-content"
+              onClick={(e) => e.stopPropagation()}
+              onTouchStart={handleTouchStart}
+              onTouchEnd={handleTouchEnd}
+            >
+              <button className="gallery-close" onClick={closeGallery}>
+                ×
+              </button>
+
+              <button className="gallery-nav gallery-prev" onClick={prevImage}>
+                ‹
+              </button>
+
+              <div className="gallery-image-container">
+                <img
+                  src={`/${images[galleryIndex].localPath}`}
+                  alt={`图片 ${galleryIndex + 1}`}
+                />
+              </div>
+
+              <button className="gallery-nav gallery-next" onClick={nextImage}>
+                ›
+              </button>
+
+              <div className="gallery-counter">
+                {galleryIndex + 1} / {images.length}
+              </div>
             </div>
           </div>
         )}
