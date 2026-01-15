@@ -57,6 +57,39 @@ npm run build
 NODE_ENV=production npm start
 ```
 
+### Docker 部署
+
+**构建镜像:**
+```bash
+docker build -t xhs-web-demo .
+```
+
+**运行容器:**
+```bash
+# 基本运行
+docker run -p 3000:3000 xhs-web-demo
+
+# 使用环境变量文件（推荐，用于 AI 功能）
+docker run -p 3000:3000 --env-file .env xhs-web-demo
+
+# 完整运行（环境变量 + 数据持久化）
+docker run -p 3000:3000 \
+  --env-file .env \
+  -v $(pwd)/storage:/app/storage \
+  xhs-web-demo
+```
+
+**环境变量说明:**
+
+| 变量 | 说明 | 必需 |
+|------|------|------|
+| `PORT` | 服务端口，默认 3000 | 否 |
+| `OPENROUTER_API_KEY` | OpenRouter API 密钥，用于 AI 功能 | 否 |
+
+**数据持久化:**
+
+容器内的数据（SQLite 数据库和媒体文件）存储在 `/app/storage` 目录。使用 `-v` 挂载本地目录以持久化数据，否则容器删除后数据丢失。
+
 ## 使用方法
 
 1. 打开小红书APP，找到想要保存的帖子
