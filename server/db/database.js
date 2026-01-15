@@ -40,6 +40,20 @@ if (!columns.includes('ai_processed_at')) {
   console.log('Added ai_processed_at column to posts table');
 }
 
+if (!columns.includes('ai_status')) {
+  db.exec("ALTER TABLE posts ADD COLUMN ai_status TEXT DEFAULT 'pending'");
+  // Migrate existing posts: set status based on ai_processed_at
+  db.exec(`
+    UPDATE posts
+    SET ai_status = CASE
+      WHEN ai_processed_at IS NOT NULL THEN 'completed'
+      ELSE 'pending'
+    END
+    WHERE ai_status IS NULL
+  `);
+  console.log('Added ai_status column to posts table');
+}
+
 // Database access functions
 
 /**
@@ -47,8 +61,8 @@ if (!columns.includes('ai_processed_at')) {
  */
 export function createPost({ url, title, description, mediaPaths }) {
   const stmt = db.prepare(`
-    INSERT INTO posts (url, title, description, media_paths)
-    VALUES (?, ?, ?, ?)
+    INSERT INTO posts (url, title, description, media_paths, ai_status)
+    VALUES (?, ?, ?, ?, 'pending')
   `);
 
   const info = stmt.run(
@@ -145,11 +159,30 @@ export function deletePost(id) {
 export function updateAiResults(id, { labels, summary }) {
   const stmt = db.prepare(`
     UPDATE posts
-    SET ai_labels = ?, ai_summary = ?, ai_processed_at = CURRENT_TIMESTAMP
+    SET ai_labels = ?, ai_summary = ?, ai_processed_at = CURRENT_TIMESTAMP, ai_status = 'completed'
     WHERE id = ?
   `);
 
   stmt.run(JSON.stringify(labels || []), summary || null, id);
+  return findById(id);
+}
+
+/**
+ * Update AI processing status
+ */
+export function updateAiStatus(id, status) {
+  const validStatuses = ['pending', 'processing', 'completed', 'failed'];
+  if (!validStatuses.includes(status)) {
+    throw new Error(`Invalid AI status: ${status}`);
+  }
+
+  const stmt = db.prepare(`
+    UPDATE posts
+    SET ai_status = ?
+    WHERE id = ?
+  `);
+
+  stmt.run(status, id);
   return findById(id);
 }
 

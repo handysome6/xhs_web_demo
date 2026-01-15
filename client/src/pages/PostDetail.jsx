@@ -1,7 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Markdown from 'react-markdown';
 import { getPost, processPostWithAI } from '../services/api';
+
+const POLL_INTERVAL = 2000; // 2 seconds
+const POLL_TIMEOUT = 60000; // 60 seconds
 
 export default function PostDetail() {
   const { id } = useParams();
@@ -9,32 +12,93 @@ export default function PostDetail() {
   const [post, setPost] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [processing, setProcessing] = useState(false);
+  const pollStartTime = useRef(null);
+  const pollTimer = useRef(null);
 
-  useEffect(() => {
-    async function fetchPost() {
-      try {
-        setLoading(true);
-        const data = await getPost(id);
-        setPost(data.post);
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
+  // Check if AI is currently processing
+  const isAiProcessing = post?.ai_status === 'pending' || post?.ai_status === 'processing';
+
+  // Fetch post data
+  const fetchPost = useCallback(async () => {
+    try {
+      const data = await getPost(id);
+      setPost(data.post);
+      return data.post;
+    } catch (err) {
+      setError(err.message);
+      return null;
     }
-    fetchPost();
   }, [id]);
 
+  // Start polling for AI status updates
+  const startPolling = useCallback(() => {
+    if (pollTimer.current) return; // Already polling
+
+    pollStartTime.current = Date.now();
+    console.log('Starting AI status polling...');
+
+    const poll = async () => {
+      // Check timeout
+      if (Date.now() - pollStartTime.current > POLL_TIMEOUT) {
+        console.log('Polling timeout reached');
+        stopPolling();
+        return;
+      }
+
+      const updatedPost = await fetchPost();
+
+      // Stop polling if status changed to completed or failed
+      if (updatedPost && (updatedPost.ai_status === 'completed' || updatedPost.ai_status === 'failed')) {
+        console.log(`AI processing ${updatedPost.ai_status}`);
+        stopPolling();
+        return;
+      }
+
+      // Continue polling
+      pollTimer.current = setTimeout(poll, POLL_INTERVAL);
+    };
+
+    pollTimer.current = setTimeout(poll, POLL_INTERVAL);
+  }, [fetchPost]);
+
+  // Stop polling
+  const stopPolling = useCallback(() => {
+    if (pollTimer.current) {
+      clearTimeout(pollTimer.current);
+      pollTimer.current = null;
+      pollStartTime.current = null;
+      console.log('Stopped AI status polling');
+    }
+  }, []);
+
+  // Initial fetch
+  useEffect(() => {
+    async function init() {
+      setLoading(true);
+      const fetchedPost = await fetchPost();
+      setLoading(false);
+
+      // Start polling if AI is processing
+      if (fetchedPost && (fetchedPost.ai_status === 'pending' || fetchedPost.ai_status === 'processing')) {
+        startPolling();
+      }
+    }
+    init();
+
+    // Cleanup on unmount
+    return () => stopPolling();
+  }, [id, fetchPost, startPolling, stopPolling]);
+
+  // Handle manual AI processing trigger
   const handleProcessAI = async () => {
     try {
-      setProcessing(true);
       const data = await processPostWithAI(id);
       setPost(data.post);
+
+      // Start polling since processing is now async
+      startPolling();
     } catch (err) {
-      alert('AI处理失败: ' + err.message);
-    } finally {
-      setProcessing(false);
+      alert('AI处理触发失败: ' + err.message);
     }
   };
 
@@ -69,6 +133,7 @@ export default function PostDetail() {
   const images = post.media_paths?.filter(m => m.type === 'image') || [];
   const videos = post.media_paths?.filter(m => m.type === 'video') || [];
   const hasAiData = post.ai_labels?.length > 0 || post.ai_summary;
+  const aiStatus = post.ai_status || 'pending';
 
   return (
     <div className="post-detail">
@@ -98,7 +163,7 @@ export default function PostDetail() {
             <h3>AI 标签</h3>
             {post.ai_labels?.length > 0 && <span className="ai-badge">AI 生成</span>}
           </div>
-          {processing ? (
+          {isAiProcessing ? (
             <div className="ai-loading">
               <span className="spinner"></span> AI 处理中...
             </div>
@@ -110,13 +175,13 @@ export default function PostDetail() {
             </div>
           ) : (
             <div className="ai-not-processed">
-              <p>暂无 AI 标签</p>
+              <p>{aiStatus === 'failed' ? 'AI 处理失败' : '暂无 AI 标签'}</p>
               <button
                 className="process-btn"
                 onClick={handleProcessAI}
-                disabled={processing}
+                disabled={isAiProcessing}
               >
-                生成 AI 标签
+                {aiStatus === 'failed' ? '重试' : '生成 AI 标签'}
               </button>
             </div>
           )}
@@ -128,7 +193,7 @@ export default function PostDetail() {
             <h3>AI 摘要</h3>
             {post.ai_summary && <span className="ai-badge">AI 生成</span>}
           </div>
-          {processing ? (
+          {isAiProcessing ? (
             <div className="ai-loading">
               <span className="spinner"></span> AI 处理中...
             </div>
@@ -138,14 +203,14 @@ export default function PostDetail() {
             </div>
           ) : (
             <div className="ai-not-processed">
-              <p>暂无 AI 摘要</p>
+              <p>{aiStatus === 'failed' ? 'AI 处理失败' : '暂无 AI 摘要'}</p>
               {!post.ai_labels?.length && (
                 <button
                   className="process-btn"
                   onClick={handleProcessAI}
-                  disabled={processing}
+                  disabled={isAiProcessing}
                 >
-                  生成 AI 摘要
+                  {aiStatus === 'failed' ? '重试' : '生成 AI 摘要'}
                 </button>
               )}
             </div>
@@ -158,9 +223,9 @@ export default function PostDetail() {
             <button
               className="reprocess-btn"
               onClick={handleProcessAI}
-              disabled={processing}
+              disabled={isAiProcessing}
             >
-              {processing ? '处理中...' : '重新生成 AI 内容'}
+              {isAiProcessing ? '处理中...' : '重新生成 AI 内容'}
             </button>
           </div>
         )}

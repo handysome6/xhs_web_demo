@@ -23,16 +23,23 @@ async function triggerAiProcessing(postId) {
       return;
     }
 
+    // Set status to 'processing' before starting
+    db.updateAiStatus(postId, 'processing');
     console.log(`Starting AI processing for post ${postId}...`);
+
     const { labels, summary } = await processPost(post);
 
     if (labels || summary) {
       db.updateAiResults(postId, { labels, summary });
       console.log(`AI processing completed for post ${postId}`);
     } else {
+      // No API key or no results - mark as failed
+      db.updateAiStatus(postId, 'failed');
       console.log(`AI processing skipped for post ${postId} (no API key or no results)`);
     }
   } catch (error) {
+    // Mark as failed on error
+    db.updateAiStatus(postId, 'failed');
     console.error(`AI processing failed for post ${postId}:`, error.message);
   }
 }
@@ -136,6 +143,7 @@ router.get('/:id', async (req, res) => {
 
 /**
  * POST /api/posts/:id/process - Manually trigger AI processing
+ * Returns immediately with 'processing' status, processes async
  */
 router.post('/:id/process', async (req, res) => {
   try {
@@ -148,25 +156,22 @@ router.post('/:id/process', async (req, res) => {
       });
     }
 
+    // Set status to 'processing' immediately
+    const updatedPost = db.updateAiStatus(id, 'processing');
     console.log(`Manual AI processing triggered for post ${id}`);
-    const { labels, summary } = await processPost(post);
 
-    if (labels || summary) {
-      const updatedPost = db.updateAiResults(id, { labels, summary });
-      res.json({
-        message: 'AI处理完成',
-        post: updatedPost
-      });
-    } else {
-      res.json({
-        message: 'AI处理跳过（未配置API密钥或无结果）',
-        post
-      });
-    }
+    // Trigger async processing (non-blocking)
+    triggerAiProcessing(id);
+
+    // Return immediately with processing status
+    res.json({
+      message: 'AI处理已开始',
+      post: updatedPost
+    });
   } catch (error) {
-    console.error('Error processing post with AI:', error);
+    console.error('Error triggering AI processing:', error);
     res.status(500).json({
-      error: 'AI处理失败: ' + error.message
+      error: 'AI处理触发失败: ' + error.message
     });
   }
 });
