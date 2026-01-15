@@ -42,17 +42,15 @@ if (!columns.includes('ai_processed_at')) {
 
 if (!columns.includes('ai_status')) {
   db.exec("ALTER TABLE posts ADD COLUMN ai_status TEXT DEFAULT 'pending'");
-  // Migrate existing posts: set status based on ai_processed_at
-  db.exec(`
-    UPDATE posts
-    SET ai_status = CASE
-      WHEN ai_processed_at IS NOT NULL THEN 'completed'
-      ELSE 'pending'
-    END
-    WHERE ai_status IS NULL
-  `);
   console.log('Added ai_status column to posts table');
 }
+
+// Always ensure ai_status is correct for posts with ai_processed_at
+db.exec(`
+  UPDATE posts
+  SET ai_status = 'completed'
+  WHERE ai_processed_at IS NOT NULL AND ai_status != 'completed'
+`);
 
 // Database access functions
 
